@@ -801,6 +801,7 @@ dependencies = [
  "egui",
  "egui_demo_lib",
  "env_logger",
+ "epaint",
  "log",
  "serde",
  "wasm-bindgen-futures",

@@ -5,7 +5,8 @@
 //! There will be a main menu, a screen befor the user starts the game, a screen for when the user
 //! dies and a screen for after the player dies.
 
-use egui::Ui;
+use egui::{Ui, Color32, Pos2, Stroke, Rect, Sense, Vec2, Painter};
+use epaint::{Mesh, Vertex};
 use egui_demo_lib::easy_mark;
 
 #[derive(PartialEq)]
@@ -38,7 +39,7 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
-            state: AppStatus::Menu
+            state: AppStatus::GameReadyToStart
         }
     }
 }
@@ -99,6 +100,56 @@ impl TemplateApp {
             //ui.label("");
          });
     }
+
+    fn draw_dino(x: f64, y: f64, painter: Painter) {
+        let mut mesh = Mesh::default();
+        let color = Color32::from_rgb(200,100,0);
+
+    }
+
+    fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
+        let (mut response, painter) =
+            ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
+
+        ui.heading("Now Playing!");
+        /*let start = Pos2::new(50.0,50.0);
+        let end = Pos2::new(150.0,150.0);
+        painter.line_segment([start,end],Stroke::new(10.0, Color32::RED));
+
+        
+        // Draw a blue filled circle
+        let center = Pos2::new(100.0, 100.0);
+        painter.circle_filled(center, 50.0, Color32::BLUE);
+
+        // Draw a green rectangle with rounded corners
+        let rect = Rect::from_min_size(Pos2::new(50.0, 150.0), egui::vec2(150.0, 75.0));
+        painter.rect_filled(rect, 10.0, Color32::GREEN);
+        */
+        let mut mesh = Mesh::default();
+    
+    // Define the color for the triangle
+    let color = Color32::from_rgb(200, 100, 100);
+    
+    // Create vertices with positions, colors, and UV coordinates
+    // (The UVs here are arbitrary since we’re not texturing the shape)
+    let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color: color, uv: Pos2::new(0.0, 0.0)};
+    let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color: color, uv: Pos2::new(0.0, 0.0)};
+    let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color: color, uv: Pos2::new(0.0, 0.0)};
+    let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color: color, uv: Pos2::new(0.0, 0.0)};
+    
+    // Push vertices into the mesh
+    mesh.vertices.push(v0);
+    mesh.vertices.push(v1);
+    mesh.vertices.push(v2);
+    mesh.vertices.push(v3);
+
+    // Define the triangle by referencing vertex indices (order matters for the winding)
+    mesh.indices.extend_from_slice(&[0, 1, 2, 1, 2, 3]);
+    
+    // Add the custom mesh to the painter
+    painter.add(egui::epaint::Shape::mesh(mesh));
+        
+    }
 }
 
 impl eframe::App for TemplateApp {
@@ -136,7 +187,9 @@ impl eframe::App for TemplateApp {
                 self.update_menu(ctx, _frame, ui);
             } else if (self.state) == AppStatus::Credits {
                 self.update_credits(ctx, _frame, ui);
-            } else {
+            } else if (self.state) == AppStatus::GameReadyToStart {
+                self.update_game(ctx, _frame, ui);
+            } else{
                 ui.label("Invalid app state");
             }
 
