@@ -5,7 +5,7 @@
 //! There will be a main menu, a screen befor the user starts the game, a screen for when the user
 //! dies and a screen for after the player dies.
 
-use egui::{Ui, Color32, Pos2, Stroke, Rect, Sense, Vec2, Painter};
+use egui::{Ui, Color32, Pos2, Sense, Painter};
 use epaint::{Mesh, Vertex};
 use egui_demo_lib::easy_mark;
 
@@ -72,13 +72,13 @@ impl TemplateApp {
 
             ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
                 
-            let mut play_button = ui.button("Play!");
+            let play_button = ui.button("Play!");
 
             if play_button.clicked() {
                 self.state = AppStatus::GameReadyToStart;
             };
 
-            let mut credits_button = ui.button("Credits");
+            let credits_button = ui.button("Credits");
 
             if credits_button.clicked() {
                 self.state = AppStatus::Credits;
@@ -102,13 +102,13 @@ impl TemplateApp {
     }
 
     fn draw_dino(x: f64, y: f64, painter: Painter) {
-        let mut mesh = Mesh::default();
+        let mesh = Mesh::default();
         let color = Color32::from_rgb(200,100,0);
 
     }
 
     fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
-        let (mut response, painter) =
+        let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
         ui.heading("Now Playing!");
@@ -132,10 +132,10 @@ impl TemplateApp {
     
     // Create vertices with positions, colors, and UV coordinates
     // (The UVs here are arbitrary since we’re not texturing the shape)
-    let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color: color, uv: Pos2::new(0.0, 0.0)};
-    let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color: color, uv: Pos2::new(0.0, 0.0)};
-    let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color: color, uv: Pos2::new(0.0, 0.0)};
-    let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color: color, uv: Pos2::new(0.0, 0.0)};
+    let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
+    let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
+    let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
+    let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
     
     // Push vertices into the mesh
     mesh.vertices.push(v0);
