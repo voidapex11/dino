@@ -8,6 +8,8 @@
 use egui::{Ui, Color32, Pos2, Sense, Painter};
 use epaint::{Mesh, Vertex};
 use egui_demo_lib::easy_mark;
+use eframe::egui::{self};
+
 
 #[derive(PartialEq)]
 enum AppStatus {
@@ -26,6 +28,10 @@ pub struct TemplateApp {
     // Example stuff:
     label: String,
 
+    dino_speed_y: f64,
+    dino_y: f64,
+    dino_distance: f64,
+
     #[serde(skip)]
     state: AppStatus,
 
@@ -39,12 +45,16 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!".to_owned(),
             value: 2.7,
-            state: AppStatus::GameReadyToStart
+            state: AppStatus::GameReadyToStart,
+            dino_y: 0.0,
+            dino_speed_y: 0.0,
+            dino_distance: 0.0,
         }
     }
 }
 
 impl TemplateApp {
+
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -101,10 +111,70 @@ impl TemplateApp {
          });
     }
 
-    fn draw_dino(x: f64, y: f64, painter: Painter) {
-        let mesh = Mesh::default();
-        let color = Color32::from_rgb(200,100,0);
+    fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) {
+        let size = 3.0;
+        let mut mesh = Mesh::default();
+        let color = Color32::from_rgb(0,0,0);
 
+        let mut points = vec![
+            [0.0,8.0],[1.0,8.0], [0.0, 14.0],[1.0, 14.0],
+            [1.0,10.0],[2.0,10.0], [1.0,15.0],[2.0,15.0],
+            [2.0, 11.0],[3.0, 11.0], [2.0, 16.0], [3.0, 16.0],
+            [3.0, 12.0], [4.0, 12.0], [3.0, 17.0], [4.0, 17.0], 
+            [5.0, 12.0], [4.0, 18.0], [5.0, 18.0],
+            [5.0, 11.0], [6.0, 11.0], [5.0, 22.0], [6.0, 22.0],
+            [6.0, 10.0], [7.0, 10.0], [6.0, 20.0], [7.0, 20.0],
+            [8.0, 10.0], [7.0, 19.0], [8.0, 19.0],
+            [8.0, 9.0], [9.0, 9.0], [8.0, 18.0], [9.0, 18.0],
+            [9.0, 8.0], [10.0, 8.0], [9.0, 19.0], [10.0, 19.0],
+            [10.0, 1.0], [11.0, 1.0], [10.0, 22.0], [11.0, 22.0],
+            [11.0, 0.0], [12.0, 0.0], [11.0, 17.0], [12.0, 17.0],
+            [12.0, 0.0], [13.0, 0.0], [12.0, 2.0], [13.0, 2.0],
+            [12.0, 3.0], [13.0, 3.0], [12.0, 16.0], [13.0, 16.0],
+            [13.0, 0.0], [14.0, 0.0], [13.0, 14.0], [14.0, 14.0],
+            [14.0, 0.0], [15.0, 0.0], [14.0, 8.0], [15.0, 8.0],
+            [15.0, 0.0], [19.0, 0.0], [15.0, 1.0], [19.0, 1.0],
+            [15.0, 1.0], [20.0, 1.0], [15.0, 6.0], [20.0, 6.0],
+            [15.0, 7.0], [18.0, 7.0], [15.0, 8.0], [18.0, 8.0], 
+            [14.0, 10.0], [16.0, 10.0], [14.0, 11.0], [16.0, 11.0],
+            [15.0, 11.0], [16.0, 11.0], [15.0, 12.0], [16.0, 12.0],
+            [6.0, 21.0], [7.0, 21.0], [6.0, 22.0], [7.0, 22.0],
+            [11.0, 21.0], [12.0, 21.0], [11.0, 22.0], [12.0, 22.0]
+        ];
+        for point in points.iter_mut() {
+            // pass
+            let vn = Vertex { pos: Pos2::new(((point[0]*size)+x) as f32, ((point[1]*size)+y) as f32), color, uv: Pos2::new(0.0, 0.0) };
+            mesh.vertices.push(vn);
+        }
+
+        mesh.indices.extend_from_slice(&[
+            0, 1, 2,    1, 2, 3,
+            4, 5, 6,    5, 6, 7,
+            8, 9, 10,    9, 10, 11,
+            12, 13, 14,    13, 14, 15,
+            13, 16, 17,    16, 17, 18,
+            19, 20, 21,    20, 21, 22,
+            23, 24, 25,    24, 25, 26,
+            24, 27, 28,    27, 28, 29,
+            30, 31, 32,    31, 32, 33,
+            34, 35, 36,    35, 36, 37,
+            38, 39, 40,    39, 40, 41,
+            42, 43, 44,    43, 44, 45,
+            46, 47, 48,    47, 48, 49,
+            50, 51, 52,    51, 52, 53,
+            54, 55, 56,    55, 56, 57,
+            58, 59, 60,    59, 60, 61,
+            62, 63, 64,    63, 64, 65,
+            66, 67, 68,    67, 68, 69,
+            70, 71, 72,    71, 72, 73,
+            74, 75, 76,    75, 76, 77,
+            78, 79, 80,    79, 80, 81,
+            82, 83, 84,    83, 84, 85,
+            86, 87, 88,    87, 88, 89
+        ]);
+    
+        // Add the custom mesh to the painter
+        painter.add(egui::epaint::Shape::mesh(mesh));
     }
 
     fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
@@ -127,28 +197,29 @@ impl TemplateApp {
         */
         let mut mesh = Mesh::default();
     
-    // Define the color for the triangle
-    let color = Color32::from_rgb(200, 100, 100);
+        // Define the color for the triangle
+        let color = Color32::from_rgb(200, 100, 100);
     
-    // Create vertices with positions, colors, and UV coordinates
-    // (The UVs here are arbitrary since we’re not texturing the shape)
-    let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
-    let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
-    let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
-    let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
+        // Create vertices with positions, colors, and UV coordinates
+        // (The UVs here are arbitrary since we’re not texturing the shape)
+        let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
+        let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
+        let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
+        let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
     
-    // Push vertices into the mesh
-    mesh.vertices.push(v0);
-    mesh.vertices.push(v1);
-    mesh.vertices.push(v2);
-    mesh.vertices.push(v3);
+        // Push vertices into the mesh
+        mesh.vertices.push(v0);
+        mesh.vertices.push(v1);
+        mesh.vertices.push(v2);
+        mesh.vertices.push(v3);
 
-    // Define the triangle by referencing vertex indices (order matters for the winding)
-    mesh.indices.extend_from_slice(&[0, 1, 2, 1, 2, 3]);
+        // Define the triangle by referencing vertex indices (order matters for the winding)
+        mesh.indices.extend_from_slice(&[0, 1, 2, 1, 2, 3]);
     
-    // Add the custom mesh to the painter
-    painter.add(egui::epaint::Shape::mesh(mesh));
+        // Add the custom mesh to the painter
+        //painter.add(egui::epaint::Shape::mesh(mesh));
         
+        Self::draw_dino(30.0,30.0, painter, ui, ctx);
     }
 }
 
