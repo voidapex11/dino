@@ -5,11 +5,14 @@
 //! There will be a main menu, a screen befor the user starts the game, a screen for when the user
 //! dies and a screen for after the player dies.
 
-use egui::{Ui, Color32, Pos2, Sense, Painter};
+use egui::{Ui, Color32, Pos2, Sense, Painter, Key};
 use epaint::{Mesh, Vertex};
 use egui_demo_lib::easy_mark;
-use eframe::egui::{self};
+use rand::prelude::*;
+use std::error;
+use eframe::egui;
 
+type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(PartialEq)]
 enum AppStatus {
@@ -19,6 +22,30 @@ enum AppStatus {
     GameReadyToStart,
     PlayingGame,
     Died
+}
+
+#[derive(Copy, Clone)]
+pub struct Enemy {
+    start_x: f64,
+    end_x: f64,
+    image: usize,
+    
+    height: f64,
+    can_duck: bool,
+}
+
+impl Default for Enemy {
+    fn default() -> Self {
+        let mut rng = rand::rng();
+        let e_type = rng.random_range(1..=2) as f64;
+        Self {
+            start_x: 500.0,
+            end_x: 430.0+10.0*e_type,
+            image: e_type as usize,
+            height: e_type,
+            can_duck: false,
+        }
+    }
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -31,6 +58,11 @@ pub struct TemplateApp {
     dino_speed_y: f64,
     dino_y: f64,
     dino_distance: f64,
+
+    dino_speed: f64,
+    
+    #[serde(skip)]
+    enemys: Vec<Enemy>,
 
     #[serde(skip)]
     state: AppStatus,
@@ -48,7 +80,9 @@ impl Default for TemplateApp {
             state: AppStatus::GameReadyToStart,
             dino_y: 0.0,
             dino_speed_y: 0.0,
+            dino_speed: 0.0,
             dino_distance: 0.0,
+            enemys: Vec::new(),
         }
     }
 }
@@ -57,11 +91,6 @@ impl TemplateApp {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
@@ -74,14 +103,7 @@ impl TemplateApp {
         ui.vertical_centered(|ui| {
         // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Dinosaur game");
-
-                
-            ui.label("Write somethingghasdfasdf: ");
-            ui.text_edit_singleline(&mut self.label);
-                
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-                
+            
             let play_button = ui.button("Play!");
 
             if play_button.clicked() {
@@ -92,10 +114,6 @@ impl TemplateApp {
 
             if credits_button.clicked() {
                 self.state = AppStatus::Credits;
-            };
-
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
             };
         });
     }
@@ -111,7 +129,7 @@ impl TemplateApp {
          });
     }
 
-    fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) {
+    fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         let size = 3.0;
         let mut mesh = Mesh::default();
         let color = Color32::from_rgb(0,0,0);
@@ -142,7 +160,6 @@ impl TemplateApp {
             [11.0, 21.0], [12.0, 21.0], [11.0, 22.0], [12.0, 22.0]
         ];
         for point in points.iter_mut() {
-            // pass
             let vn = Vertex { pos: Pos2::new(((point[0]*size)+x) as f32, ((point[1]*size)+y) as f32), color, uv: Pos2::new(0.0, 0.0) };
             mesh.vertices.push(vn);
         }
@@ -173,53 +190,100 @@ impl TemplateApp {
             86, 87, 88,    87, 88, 89
         ]);
     
-        // Add the custom mesh to the painter
         painter.add(egui::epaint::Shape::mesh(mesh));
+        
+        Ok(())
+    }
+
+    fn draw_enemy(enemy: Enemy, painter: &Painter) -> Result<()> {
+        let size = 3.0;
+        let mut mesh = Mesh::default();
+        let color = Color32::from_rgb(0,0,0);
+
+        let mut points = vec![
+            [0.0, 7.0-6.5*(enemy.height-1.0)], [30.0, 7.0-6.5*(enemy.height-1.0)], [0.0, 22.0], [30.0, 22.0]
+        ];
+        
+       for point in points.iter_mut() {
+            let vn = Vertex { pos: Pos2::new(((point[0]*size)+enemy.start_x) as f32, ((point[1]*size)+250.0) as f32), color, uv: Pos2::new(0.0, 0.0) };
+            mesh.vertices.push(vn);
+        }
+        
+       mesh.indices.extend_from_slice(&[
+            0, 1, 2,    1, 2, 3
+        ]);
+        
+       (*painter).add(egui::epaint::Shape::mesh(mesh));
+
+        Ok(())
+    }
+
+
+    fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
+        if self.dino_y < 100.0 {
+            self.dino_speed_y += 1.0;
+        } else {
+            self.dino_y = 100.0;
+            self.dino_speed_y = 0.0_f64.min(self.dino_speed_y);
+        };
+        self.dino_y = (100.0_f64).min(self.dino_y+self.dino_speed_y);
+        
+        self.dino_speed+=0.01;
+        for enemy in self.enemys.iter_mut() {
+            (*enemy).start_x -= self.dino_speed*0.1;
+            (*enemy).end_x -= self.dino_speed*0.1;
+        }
+
+        let events = ui.input(|i| { i.clone() }).events.clone();
+        for event in &events {
+            match event {
+                egui::Event::Key{key, pressed, modifiers, physical_key, repeat} => {
+                    if *key==Key::W || *key==Key::ArrowDown {
+                        self.dino_speed_y -=20.0
+                    }
+                },
+                egui::Event::Text(t) => {
+                    if t=="W" || t==" " {
+                        self.dino_speed_y -=20.0
+                    }
+                }
+                _ => {}
+            }
+        }
+
+
+        Ok(())
     }
 
     fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
+        if ui.button("jump").clicked() {
+            self.dino_speed_y = -20.0;
+        };
+
+
+        if ui.button("spawn").clicked() {
+            self.enemys.push(Enemy::default())
+        };
+       
+        if ui.button("clear").clicked() {
+            self.enemys = Vec::new()
+        };
+
+
+        ui.add(egui::Slider::new(&mut self.dino_speed_y, -30.0..=30.0).text("speed"));
+        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=100.0).text("y"));
+        ui.add(egui::Slider::new(&mut self.enemys.len(), 0..=10).text("enemys"));
+        ui.heading("Now Playing!");
+
+                
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
-        ui.heading("Now Playing!");
-        /*let start = Pos2::new(50.0,50.0);
-        let end = Pos2::new(150.0,150.0);
-        painter.line_segment([start,end],Stroke::new(10.0, Color32::RED));
+        for enemy in self.enemys.iter_mut() {
+            Self::draw_enemy(*enemy, &painter).unwrap();
+        }
 
-        
-        // Draw a blue filled circle
-        let center = Pos2::new(100.0, 100.0);
-        painter.circle_filled(center, 50.0, Color32::BLUE);
-
-        // Draw a green rectangle with rounded corners
-        let rect = Rect::from_min_size(Pos2::new(50.0, 150.0), egui::vec2(150.0, 75.0));
-        painter.rect_filled(rect, 10.0, Color32::GREEN);
-        */
-        let mut mesh = Mesh::default();
-    
-        // Define the color for the triangle
-        let color = Color32::from_rgb(200, 100, 100);
-    
-        // Create vertices with positions, colors, and UV coordinates
-        // (The UVs here are arbitrary since we’re not texturing the shape)
-        let v0 = Vertex { pos: Pos2::new(50.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
-        let v1 = Vertex { pos: Pos2::new(150.0, 50.0), color, uv: Pos2::new(0.0, 0.0)};
-        let v2 = Vertex { pos: Pos2::new(100.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
-        let v3 = Vertex { pos: Pos2::new(150.0, 150.0), color, uv: Pos2::new(0.0, 0.0)};
-    
-        // Push vertices into the mesh
-        mesh.vertices.push(v0);
-        mesh.vertices.push(v1);
-        mesh.vertices.push(v2);
-        mesh.vertices.push(v3);
-
-        // Define the triangle by referencing vertex indices (order matters for the winding)
-        mesh.indices.extend_from_slice(&[0, 1, 2, 1, 2, 3]);
-    
-        // Add the custom mesh to the painter
-        //painter.add(egui::epaint::Shape::mesh(mesh));
-        
-        Self::draw_dino(30.0,30.0, painter, ui, ctx);
+        Self::draw_dino(30.0,self.dino_y+150.0, painter, ui, ctx).unwrap();
     }
 }
 
@@ -233,6 +297,15 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
+        
+        
+        match self.state { 
+            AppStatus::GameReadyToStart => { 
+                // Tell the backend to repaint as soon as possible 
+                ctx.request_repaint(); 
+            } 
+            _ => {}
+        } 
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
@@ -258,7 +331,8 @@ impl eframe::App for TemplateApp {
                 self.update_menu(ctx, _frame, ui);
             } else if (self.state) == AppStatus::Credits {
                 self.update_credits(ctx, _frame, ui);
-            } else if (self.state) == AppStatus::GameReadyToStart {
+            } else if (self.state) == AppStatus::GameReadyToStart { 
+                self.tick_game(ui).unwrap();
                 self.update_game(ctx, _frame, ui);
             } else{
                 ui.label("Invalid app state");

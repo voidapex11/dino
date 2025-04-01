@@ -21,6 +21,7 @@ egui_demo_lib = "0.31.1"
 epaint = "0.31.1"
 image = "0.25.5"
 egui_extras = { version = "0.31.1", features = ["image"]}
+rand = "0.9.0"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -30,6 +31,7 @@ env_logger = "0.11"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"           # to access the DOM (to hide the loading text)
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
