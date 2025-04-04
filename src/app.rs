@@ -24,7 +24,7 @@ enum AppStatus {
     Died
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Enemy {
     start_x: f64,
     end_x: f64,
@@ -32,6 +32,7 @@ pub struct Enemy {
     
     height: f64,
     can_duck: bool,
+    ignore: bool,
 }
 
 impl Default for Enemy {
@@ -39,11 +40,12 @@ impl Default for Enemy {
         let mut rng = rand::rng();
         let e_type = rng.random_range(1..=2) as f64;
         Self {
-            start_x: 500.0,
-            end_x: 430.0+10.0*e_type,
+            start_x: 1800.0,
+            end_x: 1730.0+10.0*e_type,
             image: e_type as usize,
             height: e_type,
             can_duck: false,
+            ignore: false,
         }
     }
 }
@@ -51,7 +53,7 @@ impl Default for Enemy {
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
+pub struct DinoGame {
     // Example stuff:
     label: String,
 
@@ -71,7 +73,7 @@ pub struct TemplateApp {
     value: f32,
 }
 
-impl Default for TemplateApp {
+impl Default for DinoGame {
     fn default() -> Self {
         Self {
             // Example stuff:
@@ -80,14 +82,14 @@ impl Default for TemplateApp {
             state: AppStatus::GameReadyToStart,
             dino_y: 0.0,
             dino_speed_y: 0.0,
-            dino_speed: 0.0,
+            dino_speed: 50.0,
             dino_distance: 0.0,
             enemys: Vec::new(),
         }
     }
 }
 
-impl TemplateApp {
+impl DinoGame {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -129,6 +131,7 @@ impl TemplateApp {
          });
     }
 
+    /// draws the dino at a given x and y
     fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         let size = 3.0;
         let mut mesh = Mesh::default();
@@ -201,7 +204,7 @@ impl TemplateApp {
         let color = Color32::from_rgb(0,0,0);
 
         let mut points = vec![
-            [0.0, 7.0-6.5*(enemy.height-1.0)], [30.0, 7.0-6.5*(enemy.height-1.0)], [0.0, 22.0], [30.0, 22.0]
+            [0.0, 7.0-6.5*(enemy.height-1.0)], [20.0, 7.0-6.5*(enemy.height-1.0)], [0.0, 22.0], [20.0, 22.0]
         ];
         
        for point in points.iter_mut() {
@@ -218,6 +221,11 @@ impl TemplateApp {
         Ok(())
     }
 
+    fn jump(&mut self) -> Result<()> {
+        self.dino_speed_y -= self.dino_speed / 2.0;
+        Ok(())
+    }
+
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
         if self.dino_y < 100.0 {
@@ -228,29 +236,40 @@ impl TemplateApp {
         };
         self.dino_y = (100.0_f64).min(self.dino_y+self.dino_speed_y);
         
-        self.dino_speed+=0.01;
+        self.dino_speed+=0.001;
+        let mut kill = Vec::new();
         for enemy in self.enemys.iter_mut() {
-            (*enemy).start_x -= self.dino_speed*0.1;
-            (*enemy).end_x -= self.dino_speed*0.1;
-        }
+            (*enemy).start_x -= self.dino_speed*0.5;
+            (*enemy).end_x -= self.dino_speed*0.5;
 
+            if (*enemy).end_x < -200.0 {
+                (*enemy).ignore = true;
+                kill.push(*enemy);
+            }
+        }
+        
+        for to_rem in kill {
+            if let Some(index) = self.enemys.iter().position(|value| *value == to_rem) {
+                self.enemys.swap_remove(index);
+            } 
+        }
+        
         let events = ui.input(|i| { i.clone() }).events.clone();
         for event in &events {
             match event {
                 egui::Event::Key{key, pressed, modifiers, physical_key, repeat} => {
                     if *key==Key::W || *key==Key::ArrowDown {
-                        self.dino_speed_y -=20.0
+                        Self::jump(self)?;
                     }
                 },
                 egui::Event::Text(t) => {
                     if t=="W" || t==" " {
-                        self.dino_speed_y -=20.0
+                        Self::jump(self)?;
                     }
                 }
                 _ => {}
             }
         }
-
 
         Ok(())
     }
@@ -260,7 +279,6 @@ impl TemplateApp {
             self.dino_speed_y = -20.0;
         };
 
-
         if ui.button("spawn").clicked() {
             self.enemys.push(Enemy::default())
         };
@@ -269,25 +287,50 @@ impl TemplateApp {
             self.enemys = Vec::new()
         };
 
-
-        ui.add(egui::Slider::new(&mut self.dino_speed_y, -30.0..=30.0).text("speed"));
+        ui.add(egui::Slider::new(&mut self.dino_speed, 0.0..=300.0).text("speed"));
         ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=100.0).text("y"));
         ui.add(egui::Slider::new(&mut self.enemys.len(), 0..=10).text("enemys"));
-        ui.heading("Now Playing!");
+        ui.heading("Dino Game");
 
                 
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
         for enemy in self.enemys.iter_mut() {
-            Self::draw_enemy(*enemy, &painter).unwrap();
+            if !(*enemy).ignore {
+                Self::draw_enemy(*enemy, &painter).unwrap();
+            }
         }
 
         Self::draw_dino(30.0,self.dino_y+150.0, painter, ui, ctx).unwrap();
     }
+
+    fn ready(&mut self, ui: &mut Ui) {
+        ui.heading("ready?");
+        ui.heading("skjdhaf");
+        let events = ui.input(|i| { i.clone() }).events.clone();
+        for event in &events {
+            match event {
+                egui::Event::Key{key, pressed, modifiers, physical_key, repeat} => {
+                    if *key==Key::W || *key==Key::ArrowDown {
+                        self.state = AppStatus::PlayingGame;
+                        Self::jump(self);
+                    }
+                },
+                egui::Event::Text(t) => {
+                    if t=="W" || t==" " {
+                        self.state = AppStatus::PlayingGame;
+                        Self::jump(self);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+    }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for DinoGame {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -300,10 +343,10 @@ impl eframe::App for TemplateApp {
         
         
         match self.state { 
-            AppStatus::GameReadyToStart => { 
+            AppStatus::PlayingGame => { 
                 // Tell the backend to repaint as soon as possible 
                 ctx.request_repaint(); 
-            } 
+            }
             _ => {}
         } 
 
@@ -332,6 +375,9 @@ impl eframe::App for TemplateApp {
             } else if (self.state) == AppStatus::Credits {
                 self.update_credits(ctx, _frame, ui);
             } else if (self.state) == AppStatus::GameReadyToStart { 
+                self.ready(ui);
+                self.update_game(ctx, _frame, ui);
+            } else if (self.state) == AppStatus::PlayingGame {
                 self.tick_game(ui).unwrap();
                 self.update_game(ctx, _frame, ui);
             } else{

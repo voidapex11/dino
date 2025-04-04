@@ -20,7 +20,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "dino",
         native_options,
-        Box::new(|cc| Ok(Box::new(dino::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(dino::DinoGame::new(cc)))),
     )
 }
 
@@ -50,7 +50,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(dino::TemplateApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(dino::DinoGame::new(cc)))),
             )
             .await;
 
