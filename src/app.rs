@@ -241,10 +241,15 @@ impl DinoGame {
         for enemy in self.enemys.iter_mut() {
             (*enemy).start_x -= self.dino_speed*0.5;
             (*enemy).end_x -= self.dino_speed*0.5;
-
+            
+            // if the enemy is off screen, remove it to save resources
             if (*enemy).end_x < -200.0 {
                 (*enemy).ignore = true;
                 kill.push(*enemy);
+            }
+
+            if ((self.dino_y+150.0+22.0) >= (250.0-6.5*((*enemy).height-1.0))) & (((*enemy).end_x) < 50.0) {
+                self.state = AppStatus::Died;
             }
         }
         
@@ -257,7 +262,7 @@ impl DinoGame {
         let events = ui.input(|i| { i.clone() }).events.clone();
         for event in &events {
             match event {
-                egui::Event::Key{key, pressed, modifiers, physical_key, repeat} => {
+                egui::Event::Key{key, ..} => {
                     if *key==Key::W || *key==Key::ArrowDown {
                         Self::jump(self)?;
                     }
@@ -274,7 +279,7 @@ impl DinoGame {
         Ok(())
     }
 
-    fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
+    fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) -> Result<()> {
         if ui.button("jump").clicked() {
             self.dino_speed_y = -20.0;
         };
@@ -287,22 +292,27 @@ impl DinoGame {
             self.enemys = Vec::new()
         };
 
-        ui.add(egui::Slider::new(&mut self.dino_speed, 0.0..=300.0).text("speed"));
+        if ui.button("tick").clicked() {
+            Self::tick_game(self, ui);
+        };
+
         ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=100.0).text("y"));
         ui.add(egui::Slider::new(&mut self.enemys.len(), 0..=10).text("enemys"));
         ui.heading("Dino Game");
 
                 
-        let (response, painter) =
+        let (_, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
         for enemy in self.enemys.iter_mut() {
             if !(*enemy).ignore {
-                Self::draw_enemy(*enemy, &painter).unwrap();
+                Self::draw_enemy(*enemy, &painter)?;
             }
         }
 
-        Self::draw_dino(30.0,self.dino_y+150.0, painter, ui, ctx).unwrap();
+        Self::draw_dino(30.0,self.dino_y+150.0, painter, ui, ctx)?;
+
+        Ok(())
     }
 
     fn ready(&mut self, ui: &mut Ui) {
@@ -311,22 +321,48 @@ impl DinoGame {
         let events = ui.input(|i| { i.clone() }).events.clone();
         for event in &events {
             match event {
-                egui::Event::Key{key, pressed, modifiers, physical_key, repeat} => {
+                egui::Event::Key{key, ..} => {
                     if *key==Key::W || *key==Key::ArrowDown {
                         self.state = AppStatus::PlayingGame;
-                        Self::jump(self);
+                        let _ = Self::jump(self);
                     }
                 },
                 egui::Event::Text(t) => {
                     if t=="W" || t==" " {
                         self.state = AppStatus::PlayingGame;
-                        Self::jump(self);
+                        let _ =Self::jump(self);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn update_death(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame,ui: &mut Ui) -> Result<()> {
+        ui.heading("You died, play again?");
+
+        let events = ui.input(|i| { i.clone() }).events.clone();
+        for event in &events {
+            match event {
+                egui::Event::Key{key, ..} => {
+                    if *key==Key::W || *key==Key::ArrowDown {
+                        self.enemys = Vec::new();
+                        self.state = AppStatus::PlayingGame;
+                        let _ = Self::jump(self);
+                    }
+                },
+                egui::Event::Text(t) => {
+                    if t=="W" || t==" " {
+                        self.enemys = Vec::new();
+                        self.state = AppStatus::PlayingGame;
+                        let _ =Self::jump(self);
                     }
                 }
                 _ => {}
             }
         }
 
+        Ok(())
     }
 }
 
@@ -379,6 +415,9 @@ impl eframe::App for DinoGame {
                 self.update_game(ctx, _frame, ui);
             } else if (self.state) == AppStatus::PlayingGame {
                 self.tick_game(ui).unwrap();
+                self.update_game(ctx, _frame, ui);
+            } else if (self.state) == AppStatus::Died {
+                self.update_death(ctx, _frame, ui);
                 self.update_game(ctx, _frame, ui);
             } else{
                 ui.label("Invalid app state");
