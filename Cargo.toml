@@ -19,8 +19,8 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 egui_demo_lib = "0.31.1"
 epaint = "0.31.1"
-image = "0.25.5"
-egui_extras = { version = "0.31.1", features = ["image"]}
+image = { version = "0.25", features = ["png"] }
+egui_extras = { version = "0.31.1", features = ["image", "all_loaders"]}
 rand = "0.9.0"
 anyhow = "1.0.98"
 

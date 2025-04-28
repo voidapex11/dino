@@ -1,99 +1,105 @@
-use egui::{Ui, Color32, Pos2, Sense, Painter, Key};
-use epaint::{Mesh, Vertex};
+//! # render
+//! this 
+use egui::{Ui, Color32, Pos2, Sense, Painter, Key, TextureHandle, ColorImage};
+use epaint::Rect;
 use anyhow::Result;
-use crate::app::Enemy;
+use crate::app::DinoGame;
+use epaint::pos2;
+use std::io::Cursor;
+use image::ImageReader;
 
+/// Renders part of the asset map to the painter
+pub fn render(
+    game: &mut DinoGame,
+    x: f64,
+    y: f64,
+    painter: Painter,
+    _ui: &mut Ui,
+    ctx: &eframe::egui::Context,
+    rx: f32, ry: f32,
+    _size: f32,
+    uv1: Pos2,
+    uv2: Pos2
+) -> Result<()> {
+    if game.asset_map.is_none() {
+        game.asset_map=Some(ctx.load_texture(
+            "asset_map",
+            { let raw_data = include_bytes!("asset-map.png");
+            let image = (ImageReader::new(Cursor::new(raw_data))
+                .with_guessed_format()
+                .expect("Cursor io never fails")).decode()?;
 
-pub fn render(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context, image: usize) -> Result<()> {
+            let size = [image.width() as _, image.height() as _];
+            let image_buffer = image.to_rgba8();
+            let pixels = image_buffer.as_flat_samples();
+            egui::ColorImage::from_rgba_unmultiplied(
+                size,
+                pixels.as_slice(),
+            ) },
+            egui::TextureOptions::default()))
+    } 
+    let texture_id = egui::TextureId::from(&(game.asset_map.clone().expect("no texture id")));
+
+    let x: f32 = x as f32;
+    let y: f32 = y as f32;
+    // 1517/120
+
+    painter.image(//12.6666667
+        texture_id,
+        Rect::from_min_max(pos2(x, y), pos2(x+rx, y+ry)),
+        egui::Rect::from_min_max(uv1, uv2),
+        Color32::WHITE,
+    );
     Ok(())
 }
 
 /// draws the dino at a given x and y
-pub fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
-    let size = 3.0;
-    let mut mesh = Mesh::default();
-    let color = Color32::from_rgb(0,0,0);
-
-    let mut points = vec![
-        [0.0,8.0],[1.0,8.0], [0.0, 14.0],[1.0, 14.0],
-        [1.0,10.0],[2.0,10.0], [1.0,15.0],[2.0,15.0],
-        [2.0, 11.0],[3.0, 11.0], [2.0, 16.0], [3.0, 16.0],
-        [3.0, 12.0], [4.0, 12.0], [3.0, 17.0], [4.0, 17.0], 
-        [5.0, 12.0], [4.0, 18.0], [5.0, 18.0],
-        [5.0, 11.0], [6.0, 11.0], [5.0, 22.0], [6.0, 22.0],
-        [6.0, 10.0], [7.0, 10.0], [6.0, 20.0], [7.0, 20.0],
-        [8.0, 10.0], [7.0, 19.0], [8.0, 19.0],
-        [8.0, 9.0], [9.0, 9.0], [8.0, 18.0], [9.0, 18.0],
-        [9.0, 8.0], [10.0, 8.0], [9.0, 19.0], [10.0, 19.0],
-        [10.0, 1.0], [11.0, 1.0], [10.0, 22.0], [11.0, 22.0],
-        [11.0, 0.0], [12.0, 0.0], [11.0, 17.0], [12.0, 17.0],
-        [12.0, 0.0], [13.0, 0.0], [12.0, 2.0], [13.0, 2.0],
-        [12.0, 3.0], [13.0, 3.0], [12.0, 16.0], [13.0, 16.0],
-        [13.0, 0.0], [14.0, 0.0], [13.0, 14.0], [14.0, 14.0],
-        [14.0, 0.0], [15.0, 0.0], [14.0, 8.0], [15.0, 8.0],
-        [15.0, 0.0], [19.0, 0.0], [15.0, 1.0], [19.0, 1.0],
-        [15.0, 1.0], [20.0, 1.0], [15.0, 6.0], [20.0, 6.0],
-        [15.0, 7.0], [18.0, 7.0], [15.0, 8.0], [18.0, 8.0], 
-        [14.0, 10.0], [16.0, 10.0], [14.0, 11.0], [16.0, 11.0],
-        [15.0, 11.0], [16.0, 11.0], [15.0, 12.0], [16.0, 12.0],
-        [6.0, 21.0], [7.0, 21.0], [6.0, 22.0], [7.0, 22.0],
-        [11.0, 21.0], [12.0, 21.0], [11.0, 22.0], [12.0, 22.0]
-    ];
-    for point in points.iter_mut() {
-        let vn = Vertex { pos: Pos2::new(((point[0]*size)+x) as f32, ((point[1]*size)+y) as f32), color, uv: Pos2::new(0.0, 0.0) };
-        mesh.vertices.push(vn);
-    }
-
-    mesh.indices.extend_from_slice(&[
-        0, 1, 2,    1, 2, 3,
-        4, 5, 6,    5, 6, 7,
-        8, 9, 10,    9, 10, 11,
-        12, 13, 14,    13, 14, 15,
-        13, 16, 17,    16, 17, 18,
-        19, 20, 21,    20, 21, 22,
-        23, 24, 25,    24, 25, 26,
-        24, 27, 28,    27, 28, 29,
-        30, 31, 32,    31, 32, 33,
-        34, 35, 36,    35, 36, 37,
-        38, 39, 40,    39, 40, 41,
-        42, 43, 44,    43, 44, 45,
-        46, 47, 48,    47, 48, 49,
-        50, 51, 52,    51, 52, 53,
-        54, 55, 56,    55, 56, 57,
-        58, 59, 60,    59, 60, 61,
-        62, 63, 64,    63, 64, 65,
-        66, 67, 68,    67, 68, 69,
-        70, 71, 72,    71, 72, 73,
-        74, 75, 76,    75, 76, 77,
-        78, 79, 80,    79, 80, 81,
-        82, 83, 84,    83, 84, 85,
-        86, 87, 88,    87, 88, 89
-    ]);
-
-    painter.add(egui::epaint::Shape::mesh(mesh));
-    
+pub fn draw_dino_rest_state(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 80.0;
+    let ry = 90.0;
+    let scale = 0.8;
+    let uv1 = pos2(0.03, 0.0);
+    let uv2 = pos2(0.068, 0.5);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
 
-pub fn draw_enemy(enemy: Enemy, painter: &Painter) -> Result<()> {
-    let size = 3.0;
-    let mut mesh = Mesh::default();
-    let color = Color32::from_rgb(0,0,0);
+pub fn draw_dino_left(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 80.0;
+    let ry = 90.0;
+    let scale = 0.8;
+    let uv1 = pos2(0.76, 0.0);
+    let uv2 = pos2(0.795, 0.5);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
 
-    let mut points = vec![
-        [0.0, 7.0-6.5*(enemy.height-1.0)], [20.0, 7.0-6.5*(enemy.height-1.0)], [0.0, 22.0], [20.0, 22.0]
-    ];
-    
-   for point in points.iter_mut() {
-        let vn = Vertex { pos: Pos2::new(((point[0]*size)+enemy.start_x) as f32, ((point[1]*size)+250.0) as f32), color, uv: Pos2::new(0.0, 0.0) };
-        mesh.vertices.push(vn);
-    }
-    
-   mesh.indices.extend_from_slice(&[
-        0, 1, 2,    1, 2, 3
-    ]);
-    
-   (*painter).add(egui::epaint::Shape::mesh(mesh));
+pub fn draw_dino_right(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 80.0;
+    let ry = 90.0;
+    let scale = 0.8;
+    let uv1 = pos2(0.79330065359, 0.0);
+    let uv2 = pos2(0.82883986928, 0.5);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
 
+pub fn draw_dino_still(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 80.0;
+    let ry = 90.0;
+    let scale = 0.8;
+    let uv1 = pos2(0.6862745098039216, 0.0);
+    let uv2 = pos2(0.7209967320261438, 0.5);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
+
+pub fn draw_cacti_small(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 40.0;
+    let ry = 90.0;
+    let scale = 0.8;
+    let uv1 = pos2(0.185, 0.0);
+    let uv2 = pos2(0.1985, 0.5);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }

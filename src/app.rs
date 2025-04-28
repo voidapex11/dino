@@ -9,10 +9,21 @@ use egui::{Ui, Color32, Pos2, Sense, Painter, Key};
 use epaint::{Mesh, Vertex};
 use egui_demo_lib::easy_mark;
 use rand::prelude::*;
-use std::error;
+use std::path::Path;
 use eframe::egui;
 use crate::render;
 use anyhow::Result;
+
+pub fn load_image_from_path(path: &std::path::Path) -> Result<egui::ColorImage> {
+    let image = image::ImageReader::open(path)?.decode()?;
+    let size = [image.width() as _, image.height() as _];
+    let image_buffer = image.to_rgba8();
+    let pixels = image_buffer.as_flat_samples();
+    Ok(egui::ColorImage::from_rgba_unmultiplied(
+        size,
+        pixels.as_slice(),
+    ))
+}
 
 #[derive(PartialEq)]
 enum AppStatus {
@@ -58,9 +69,11 @@ pub struct DinoGame {
     label: String,
 
     dino_speed_y: f64,
+
     dino_y: f64,
     dino_distance: f64,
 
+    #[serde(skip)]
     dino_speed: f64,
     
     #[serde(skip)]
@@ -70,7 +83,10 @@ pub struct DinoGame {
     state: AppStatus,
 
     #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    tick: i32,
+
+    #[serde(skip)]
+    pub asset_map: Option<egui::TextureHandle>,
 }
 
 impl Default for DinoGame {
@@ -78,13 +94,14 @@ impl Default for DinoGame {
         Self {
             // Example stuff:
             label: "Hello World!".to_owned(),
-            value: 2.7,
-            state: AppStatus::Menu,
-            dino_y: 0.0,
+            tick: 0,
+            state: AppStatus::GameReadyToStart,
+            dino_y: 100.0,
             dino_speed_y: 0.0,
-            dino_speed: 50.0,
+            dino_speed: 40.0,
             dino_distance: 0.0,
             enemys: Vec::new(),
+            asset_map: None
         }
     }
 }
@@ -96,8 +113,13 @@ impl DinoGame {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
-
-        Default::default()
+        let mut temp: Self = Self { ..Default::default() };
+        temp.asset_map=Some(cc.egui_ctx.load_texture(
+            "asset_map",
+            load_image_from_path(Path::new("asset-map.png")).unwrap(),
+            egui::TextureOptions::default()));
+        
+        temp
     }
 
     /// Displays the main menu
@@ -137,17 +159,33 @@ impl DinoGame {
         Ok(())
     }
 
-    fn draw_dino(x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
-        render::draw_dino(x, y, painter, ui, ctx);
+    fn draw_dino_rest(&mut self, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+        render::draw_dino_rest_state(self, x, y, painter, ui, ctx)?;
         Ok(())
     }
 
-    fn draw_enemy(enemy: Enemy, painter: &Painter) -> Result<()> {
-        render::draw_enemy(enemy, painter);
+    fn draw_dino(&mut self, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+        if self.dino_y != 100.0 || self.state == AppStatus::Died {
+            render::draw_dino_still(self, x, y, painter, ui, ctx)?;
+            return Ok(())
+        }
+
+        if ((self.tick - (self.tick % 7)) %2)==0 {
+            render::draw_dino_right(self, x-1.0, y, painter, ui, ctx)?;
+        } else {
+            render::draw_dino_left(self, x, y, painter, ui, ctx)?;
+        }
+        Ok(())
+    }
+
+    fn draw_enemy(&mut self, enemy: Enemy, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+        //render::draw_enemy(enemy, &painter)?;
+        render::draw_cacti_small(self, enemy.start_x, 260.0, &painter, ui, ctx)?;
         Ok(())
     }
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
+        self.tick += 1;
         if self.dino_y < 100.0 {
             self.dino_speed_y += 1.0;
         } else {
@@ -156,19 +194,19 @@ impl DinoGame {
         };
         self.dino_y = (100.0_f64).min(self.dino_y+self.dino_speed_y);
         
-        self.dino_speed+=0.001;
+        self.dino_speed+=0.0005;
         let mut kill = Vec::new();
         for enemy in self.enemys.iter_mut() {
             (*enemy).start_x -= self.dino_speed*0.5;
             (*enemy).end_x -= self.dino_speed*0.5;
             
             // if the enemy is off screen, remove it to save resources
-            if (*enemy).end_x < -200.0 {
+            if (*enemy).end_x < -20.0 {
                 (*enemy).ignore = true;
                 kill.push(*enemy);
             }
 
-            if ((self.dino_y+150.0+22.0) >= (250.0-6.5*((*enemy).height-1.0))) & (((*enemy).end_x) < 50.0) {
+            if (self.dino_y >= 64.0) & ((enemy.start_x < 100.0) & (enemy.end_x >= 0.0)) {
                 self.state = AppStatus::Died;
             }
         }
@@ -199,7 +237,11 @@ impl DinoGame {
         Ok(())
     }
 
-    fn update_game(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) -> Result<()> {
+    fn update_game(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        _frame: &mut eframe::Frame,
+        ui: &mut Ui) -> Result<()> {
         if ui.button("jump").clicked() {
             self.dino_speed_y = -20.0;
         };
@@ -213,24 +255,28 @@ impl DinoGame {
         };
 
         if ui.button("tick").clicked() {
-            Self::tick_game(self, ui);
+            Self::tick_game(self, ui).unwrap();
         };
 
-        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=100.0).text("y"));
-        ui.add(egui::Slider::new(&mut self.enemys.len(), 0..=10).text("enemys"));
+        ui.add(egui::Slider::new(&mut self.dino_speed, 0.0..=10000.0).text("speed"));
+        ui.add(egui::Slider::new(&mut self.tick, 0..=10000).text("tick"));
         ui.heading("Dino Game");
 
                 
         let (_, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
-        for enemy in self.enemys.iter_mut() {
+        for enemy in (self.enemys).clone().iter_mut() {
             if !(*enemy).ignore {
-                Self::draw_enemy(*enemy, &painter)?;
+                Self::draw_enemy(self,*enemy, painter.clone(), ui, ctx)?;
             }
         }
 
-        Self::draw_dino(30.0,self.dino_y+150.0, painter, ui, ctx)?;
+        if self.state == AppStatus::PlayingGame || self.state == AppStatus::Died {
+            Self::draw_dino(self, 30.0, self.dino_y+ 150.0, painter, ui, ctx)?;
+        } else {
+            Self::draw_dino_rest(self, 30.0, self.dino_y+150.0, painter, ui, ctx)?;
+        }
 
         Ok(())
     }
@@ -258,7 +304,12 @@ impl DinoGame {
         }
     }
 
-    fn update_death(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame,ui: &mut Ui) -> Result<()> {
+    fn update_death(
+        &mut self,
+        _ctx: &eframe::egui::Context,
+        _frame: &mut eframe::Frame, 
+        ui: &mut Ui
+    ) -> Result<()> {
         ui.heading("You died, play again?");
 
         let events = ui.input(|i| { i.clone() }).events.clone();
@@ -266,15 +317,13 @@ impl DinoGame {
             match event {
                 egui::Event::Key{key, ..} => {
                     if *key==Key::W || *key==Key::ArrowDown {
-                        self.enemys = Vec::new();
-                        self.state = AppStatus::PlayingGame;
+                        *self = DinoGame::default();
                         let _ = Self::jump(self);
                     }
                 },
                 egui::Event::Text(t) => {
                     if t=="W" || t==" " {
-                        self.enemys = Vec::new();
-                        self.state = AppStatus::PlayingGame;
+                        *self = DinoGame::default();
                         let _ =Self::jump(self);
                     }
                 }
@@ -332,13 +381,13 @@ impl eframe::App for DinoGame {
                 self.update_credits(ctx, _frame, ui);
             } else if (self.state) == AppStatus::GameReadyToStart { 
                 self.ready(ui);
-                self.update_game(ctx, _frame, ui);
+                self.update_game(ctx, _frame, ui).unwrap();
             } else if (self.state) == AppStatus::PlayingGame {
                 self.tick_game(ui).unwrap();
-                self.update_game(ctx, _frame, ui);
+                self.update_game(ctx, _frame, ui).unwrap();
             } else if (self.state) == AppStatus::Died {
                 self.update_death(ctx, _frame, ui).unwrap();
-                self.update_game(ctx, _frame, ui);
+                self.update_game(ctx, _frame, ui).unwrap();
             } else{
                 ui.label("Invalid app state");
             }
