@@ -1,6 +1,6 @@
 //! # render
 //! this 
-use egui::{Ui, Color32, Pos2, Sense, Painter, Key, TextureHandle, ColorImage};
+use egui::{Ui, Color32, Pos2, Painter};
 use epaint::Rect;
 use anyhow::Result;
 use crate::app::DinoGame;
@@ -78,8 +78,8 @@ pub fn draw_dino_right(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui
     let rx: f32 = 80.0;
     let ry = 90.0;
     let scale = 0.8;
-    let uv1 = pos2(0.79330065359, 0.0);
-    let uv2 = pos2(0.82883986928, 0.5);
+    let uv1 = pos2(0.793_300_6, 0.0);
+    let uv2 = pos2(0.828_839_9, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
@@ -88,8 +88,8 @@ pub fn draw_dino_still(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui
     let rx: f32 = 80.0;
     let ry = 90.0;
     let scale = 0.8;
-    let uv1 = pos2(0.6862745098039216, 0.0);
-    let uv2 = pos2(0.7209967320261438, 0.5);
+    let uv1 = pos2(0.686_274_5, 0.0);
+    let uv2 = pos2(0.720_996_74, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }

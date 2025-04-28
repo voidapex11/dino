@@ -5,8 +5,7 @@
 //! There will be a main menu, a screen befor the user starts the game, a screen for when the user
 //! dies and a screen for after the player dies.
 
-use egui::{Ui, Color32, Pos2, Sense, Painter, Key};
-use epaint::{Mesh, Vertex};
+use egui::{Ui, Sense, Painter, Key};
 use egui_demo_lib::easy_mark;
 use rand::prelude::*;
 use std::path::Path;
@@ -197,12 +196,12 @@ impl DinoGame {
         self.dino_speed+=0.0005;
         let mut kill = Vec::new();
         for enemy in self.enemys.iter_mut() {
-            (*enemy).start_x -= self.dino_speed*0.5;
-            (*enemy).end_x -= self.dino_speed*0.5;
+            enemy.start_x -= self.dino_speed*0.5;
+            enemy.end_x -= self.dino_speed*0.5;
             
             // if the enemy is off screen, remove it to save resources
-            if (*enemy).end_x < -20.0 {
-                (*enemy).ignore = true;
+            if enemy.end_x < -20.0 {
+                enemy.ignore = true;
                 kill.push(*enemy);
             }
 
@@ -258,7 +257,7 @@ impl DinoGame {
             Self::tick_game(self, ui).unwrap();
         };
 
-        ui.add(egui::Slider::new(&mut self.dino_speed, 0.0..=10000.0).text("speed"));
+        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=10000.0).text("y"));
         ui.add(egui::Slider::new(&mut self.tick, 0..=10000).text("tick"));
         ui.heading("Dino Game");
 
@@ -267,7 +266,7 @@ impl DinoGame {
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
 
         for enemy in (self.enemys).clone().iter_mut() {
-            if !(*enemy).ignore {
+            if !enemy.ignore {
                 Self::draw_enemy(self,*enemy, painter.clone(), ui, ctx)?;
             }
         }
@@ -347,12 +346,9 @@ impl eframe::App for DinoGame {
         // For inspiration and more examples, go to https://emilk.github.io/egui
         
         
-        match self.state { 
-            AppStatus::PlayingGame => { 
-                // Tell the backend to repaint as soon as possible 
-                ctx.request_repaint(); 
-            }
-            _ => {}
+        if self.state == AppStatus::PlayingGame { 
+            // Tell the backend to repaint as soon as possible 
+            ctx.request_repaint(); 
         } 
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
