@@ -100,7 +100,7 @@ impl Default for DinoGame {
             dino_speed: 40.0,
             dino_distance: 0.0,
             enemys: Vec::new(),
-            asset_map: None
+            asset_map: None,
         }
     }
 }
@@ -163,28 +163,37 @@ impl DinoGame {
         Ok(())
     }
 
-    fn draw_dino(&mut self, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    fn draw_dino(&mut self, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         if self.dino_y != 100.0 || self.state == AppStatus::Died {
-            render::draw_dino_still(self, x, y, painter, ui, ctx)?;
+            render::draw_dino_still(self, x, y, painter.clone(), ui, ctx)?;
             return Ok(())
         }
 
         if ((self.tick - (self.tick % 7)) %2)==0 {
-            render::draw_dino_right(self, x-1.0, y, painter, ui, ctx)?;
+            render::draw_dino_right(self, x-1.0, y, painter.clone(), ui, ctx)?;
         } else {
-            render::draw_dino_left(self, x, y, painter, ui, ctx)?;
+            render::draw_dino_left(self, x, y, painter.clone(), ui, ctx)?;
         }
         Ok(())
     }
 
     fn draw_enemy(&mut self, enemy: Enemy, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         //render::draw_enemy(enemy, &painter)?;
-        render::draw_cacti_small(self, enemy.start_x, 260.0, &painter, ui, ctx)?;
+        render::draw_cacti_small(self, enemy.start_x, 270.0, &painter, ui, ctx)?;
         Ok(())
     }
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
-        self.tick += 1;
+        if self.tick > 0 || self.dino_y == 0.0 {
+            self.tick += 1;
+            self.dino_distance+=self.dino_speed*0.5;
+
+            let mut rng = rand::rng();
+            let chance = rng.random_range(1..=130) as f64;
+            if chance == 1.0 {
+                self.enemys.push(Enemy::default());
+            }
+        }
         if self.dino_y < 100.0 {
             self.dino_speed_y += 1.0;
         } else {
@@ -240,7 +249,8 @@ impl DinoGame {
         &mut self,
         ctx: &eframe::egui::Context,
         _frame: &mut eframe::Frame,
-        ui: &mut Ui) -> Result<()> {
+        ui: &mut Ui
+    ) -> Result<()> {
         if ui.button("jump").clicked() {
             self.dino_speed_y = -20.0;
         };
@@ -271,10 +281,15 @@ impl DinoGame {
             }
         }
 
-        if self.state == AppStatus::PlayingGame || self.state == AppStatus::Died {
-            Self::draw_dino(self, 30.0, self.dino_y+ 150.0, painter, ui, ctx)?;
+        if (self.state == AppStatus::PlayingGame || self.state == AppStatus::Died) {
+            Self::draw_dino(self, 30.0, self.dino_y+ 150.0, &painter.clone(), ui, ctx)?;
         } else {
-            Self::draw_dino_rest(self, 30.0, self.dino_y+150.0, painter, ui, ctx)?;
+            Self::draw_dino_rest(self, 30.0, self.dino_y+150.0, painter.clone(), ui, ctx)?;
+        }
+
+        if self.tick > 0 {
+            render::draw_floor(self, 30.0+2400.0-self.dino_distance%2400.0-20.0, 324.0, &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, 30.0-self.dino_distance%2400.0, 324.0, &painter.clone(), ui, ctx)?;
         }
 
         Ok(())

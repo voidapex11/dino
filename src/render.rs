@@ -103,3 +103,13 @@ pub fn draw_cacti_small(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, 
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
+
+pub fn draw_floor(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 2400.0;
+    let ry = 25.0;
+    let scale = 0.8;
+    let uv1 = pos2(2.0/2448.0, 102.0/194.0);
+    let uv2 = pos2(2402.0/2448.0, 128.0/194.0);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
