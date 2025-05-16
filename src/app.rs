@@ -97,7 +97,7 @@ impl Default for DinoGame {
             state: AppStatus::GameReadyToStart,
             dino_y: 100.0,
             dino_speed_y: 0.0,
-            dino_speed: 40.0,
+            dino_speed: 25.0,
             dino_distance: 0.0,
             enemys: Vec::new(),
             asset_map: None,
@@ -148,13 +148,12 @@ impl DinoGame {
             easy_mark::easy_mark(ui, "# Made by voidapex11"); // using markup as well as
                                                               // programaticaly constructing is
                                                               // because why not
-            //ui.label("");
          });
     }
     
 
     fn jump(&mut self) -> Result<()> {
-        self.dino_speed_y -= self.dino_speed / 2.0;
+        self.dino_speed_y -= self.dino_speed;
         Ok(())
     }
 
@@ -170,7 +169,7 @@ impl DinoGame {
         }
 
         if ((self.tick - (self.tick % 7)) %2)==0 {
-            render::draw_dino_right(self, x-1.0, y, painter.clone(), ui, ctx)?;
+            render::draw_dino_right(self, x, y, painter.clone(), ui, ctx)?;
         } else {
             render::draw_dino_left(self, x, y, painter.clone(), ui, ctx)?;
         }
@@ -184,29 +183,31 @@ impl DinoGame {
     }
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
-        if self.tick > 0 || self.dino_y == 0.0 {
+        if self.tick > 0 || self.dino_y < 100.0 {
             self.tick += 1;
-            self.dino_distance+=self.dino_speed*0.5;
+            self.dino_distance+=self.dino_speed*0.3;
 
             let mut rng = rand::rng();
             let chance = rng.random_range(1..=130) as f64;
-            if chance == 1.0 {
+            if chance == 1.0 || self.enemys.is_empty() && chance <= 10.0 {
                 self.enemys.push(Enemy::default());
             }
         }
+
+        // gravity
         if self.dino_y < 100.0 {
-            self.dino_speed_y += 1.0;
+            self.dino_speed_y += 0.7;
         } else {
             self.dino_y = 100.0;
             self.dino_speed_y = 0.0_f64.min(self.dino_speed_y);
         };
         self.dino_y = (100.0_f64).min(self.dino_y+self.dino_speed_y);
         
-        self.dino_speed+=0.0005;
+        self.dino_speed+=0.02;
         let mut kill = Vec::new();
         for enemy in self.enemys.iter_mut() {
-            enemy.start_x -= self.dino_speed*0.5;
-            enemy.end_x -= self.dino_speed*0.5;
+            enemy.start_x -= self.dino_speed*0.3;
+            enemy.end_x -= self.dino_speed*0.3;
             
             // if the enemy is off screen, remove it to save resources
             if enemy.end_x < -20.0 {
@@ -267,8 +268,8 @@ impl DinoGame {
             Self::tick_game(self, ui).unwrap();
         };
 
-        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=10000.0).text("y"));
-        ui.add(egui::Slider::new(&mut self.tick, 0..=10000).text("tick"));
+        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=1000.0).text("y"));
+        ui.add(egui::Slider::new(&mut (self.dino_distance/200.0), 0.0..=10000.0));
         ui.heading("Dino Game");
 
                 
@@ -281,11 +282,12 @@ impl DinoGame {
             }
         }
 
-        if (self.state == AppStatus::PlayingGame || self.state == AppStatus::Died) {
+        if self.state == AppStatus::PlayingGame || self.state == AppStatus::Died {
             Self::draw_dino(self, 30.0, self.dino_y+ 150.0, &painter.clone(), ui, ctx)?;
         } else {
             Self::draw_dino_rest(self, 30.0, self.dino_y+150.0, painter.clone(), ui, ctx)?;
         }
+        render::draw_number(0.0,self, 130.0, self.dino_y+150.0, &painter.clone(), ui, ctx)?;
 
         if self.tick > 0 {
             render::draw_floor(self, 30.0+2400.0-self.dino_distance%2400.0-20.0, 324.0, &painter.clone(), ui, ctx)?;

@@ -2,7 +2,7 @@
 //! this 
 use egui::{Ui, Color32, Pos2, Painter};
 use epaint::Rect;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use crate::app::DinoGame;
 use epaint::pos2;
 use std::io::Cursor;
@@ -68,8 +68,8 @@ pub fn draw_dino_left(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui:
     let rx: f32 = 80.0;
     let ry = 90.0;
     let scale = 0.8;
-    let uv1 = pos2(0.76, 0.0);
-    let uv2 = pos2(0.795, 0.5);
+    let uv1 = pos2(1854.0/2446.0, 0.0);
+    let uv2 = pos2(1942.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
@@ -78,8 +78,8 @@ pub fn draw_dino_right(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui
     let rx: f32 = 80.0;
     let ry = 90.0;
     let scale = 0.8;
-    let uv1 = pos2(0.793_300_6, 0.0);
-    let uv2 = pos2(0.828_839_9, 0.5);
+    let uv1 = pos2(1942.0/2446.0, 0.0);
+    let uv2 = pos2(2030.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
@@ -98,8 +98,8 @@ pub fn draw_cacti_small(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, 
     let rx: f32 = 40.0;
     let ry = 90.0;
     let scale = 0.8;
-    let uv1 = pos2(0.185, 0.0);
-    let uv2 = pos2(0.1985, 0.5);
+    let uv1 = pos2(446.0/2446.0, 0.0);
+    let uv2 = pos2(480.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
@@ -108,8 +108,26 @@ pub fn draw_floor(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &m
     let rx: f32 = 2400.0;
     let ry = 25.0;
     let scale = 0.8;
-    let uv1 = pos2(2.0/2448.0, 102.0/194.0);
-    let uv2 = pos2(2402.0/2448.0, 128.0/194.0);
+    let uv1 = pos2(2.0/2446.0, 102.0/194.0);
+    let uv2 = pos2(2402.0/2446.0, 128.0/194.0);
+    render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
+
+fn get_number_cords(number:f32) -> Result<[f32; 2]> {
+    match number {
+        0.0=>Ok([1292.0, 1314.0]),
+        _=> Err(anyhow!("Invalid number"))
+    }
+}
+
+pub fn draw_number(number: f32, game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    let rx: f32 = 22.0;
+    let ry = 25.0;
+    let scale = 1.0;
+    let cords = get_number_cords(number)?;
+    let uv1 = pos2(cords[0]/2446.0, 0.0/194.0);
+    let uv2 = pos2(cords[1]/2446.0, 25.0/194.0);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
