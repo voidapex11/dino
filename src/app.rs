@@ -66,10 +66,14 @@ impl Default for Enemy {
 pub struct DinoGame {
     // Example stuff:
     label: String,
-
+    
+    #[serde(skip)]
     dino_speed_y: f64,
-
+    
+    #[serde(skip)]
     dino_y: f64,
+
+    #[serde(skip)]
     dino_distance: f64,
 
     #[serde(skip)]
@@ -83,6 +87,8 @@ pub struct DinoGame {
 
     #[serde(skip)] // This how you opt-out of serialization of a field
     tick: i32,
+    #[serde(skip)]
+    cooldown: i32,
 
     #[serde(skip)]
     pub asset_map: Option<egui::TextureHandle>,
@@ -99,6 +105,7 @@ impl Default for DinoGame {
             dino_speed_y: 0.0,
             dino_speed: 25.0,
             dino_distance: 0.0,
+            cooldown: 20,
             enemys: Vec::new(),
             asset_map: None,
         }
@@ -148,21 +155,23 @@ impl DinoGame {
             easy_mark::easy_mark(ui, "# Made by voidapex11"); // using markup as well as
                                                               // programaticaly constructing is
                                                               // because why not
-         });
+        });
     }
     
 
     fn jump(&mut self) -> Result<()> {
-        self.dino_speed_y -= self.dino_speed;
+        self.dino_speed_y -= self.dino_speed*0.55+10.0;
         Ok(())
     }
 
     fn draw_dino_rest(&mut self, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
-        render::draw_dino_rest_state(self, x, y, painter, ui, ctx)?;
+        render::draw_dino_rest_state(self, x*(render::size as f64), y*(render::size as f64), painter, ui, ctx)?;
         Ok(())
     }
 
-    fn draw_dino(&mut self, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+    fn draw_dino(&mut self, mut x: f64, mut y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
+        x*=render::size as f64;
+        y*=render::size as f64;
         if self.dino_y != 100.0 || self.state == AppStatus::Died {
             render::draw_dino_still(self, x, y, painter.clone(), ui, ctx)?;
             return Ok(())
@@ -178,32 +187,41 @@ impl DinoGame {
 
     fn draw_enemy(&mut self, enemy: Enemy, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         //render::draw_enemy(enemy, &painter)?;
-        render::draw_cacti_small(self, enemy.start_x, 270.0, &painter, ui, ctx)?;
+        render::draw_cacti_small(self, enemy.start_x*(render::size as f64), 271.0*(render::size as f64), &painter, ui, ctx)?;
         Ok(())
     }
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
+        self.dino_speed+=0.02;
+
         if self.tick > 0 || self.dino_y < 100.0 {
             self.tick += 1;
             self.dino_distance+=self.dino_speed*0.3;
-
-            let mut rng = rand::rng();
-            let chance = rng.random_range(1..=130) as f64;
-            if chance == 1.0 || self.enemys.is_empty() && chance <= 10.0 {
-                self.enemys.push(Enemy::default());
+            
+            if self.cooldown==0 {
+                let mut rng = rand::rng();
+                let chance = rng.random_range(1..=130) as f64;
+                if chance == 1.0 || self.enemys.is_empty() && chance <= 6.0 {
+                    self.enemys.push(Enemy::default());
+                    self.cooldown=40;
+                }
             }
+        }
+        if self.cooldown!=0 {
+            self.cooldown-=1;
         }
 
         // gravity
         if self.dino_y < 100.0 {
-            self.dino_speed_y += 0.7;
+            self.dino_speed_y+= 1.2;
         } else {
             self.dino_y = 100.0;
             self.dino_speed_y = 0.0_f64.min(self.dino_speed_y);
         };
-        self.dino_y = (100.0_f64).min(self.dino_y+self.dino_speed_y);
+        self.dino_y = (100_f64).min(self.dino_y+self.dino_speed_y);
         
-        self.dino_speed+=0.02;
+        self.dino_speed+=0.006;
+
         let mut kill = Vec::new();
         for enemy in self.enemys.iter_mut() {
             enemy.start_x -= self.dino_speed*0.3;
@@ -269,12 +287,15 @@ impl DinoGame {
         };
 
         ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=1000.0).text("y"));
-        ui.add(egui::Slider::new(&mut (self.dino_distance/200.0), 0.0..=10000.0));
+        //ui.add(egui::Slider::new(&mut (self.dino_distance/200.0), 0.0..=10000.0));
+        
         ui.heading("Dino Game");
 
                 
         let (_, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
+
+        render::draw_numbers(((self.dino_distance/600.0) as i32).to_string(), self, 700.0*(render::size as f64), 210.0* render::size as f64, &painter.clone(), ui, &mut ctx.clone())?;
 
         for enemy in (self.enemys).clone().iter_mut() {
             if !enemy.ignore {
@@ -287,11 +308,10 @@ impl DinoGame {
         } else {
             Self::draw_dino_rest(self, 30.0, self.dino_y+150.0, painter.clone(), ui, ctx)?;
         }
-        render::draw_number(0.0,self, 130.0, self.dino_y+150.0, &painter.clone(), ui, ctx)?;
 
         if self.tick > 0 {
-            render::draw_floor(self, 30.0+2400.0-self.dino_distance%2400.0-20.0, 324.0, &painter.clone(), ui, ctx)?;
-            render::draw_floor(self, 30.0-self.dino_distance%2400.0, 324.0, &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, ((30.0+2400.0-self.dino_distance%2400.0-20.0)*(render::size as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, ((30.0-self.dino_distance%2400.0)*(render::size as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
         }
 
         Ok(())

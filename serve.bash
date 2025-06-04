@@ -1,2 +1,2 @@
 #!/bin/bash
-RUSTFLAGS='--cfg getrandom_backend="wasm_js"' trunk serve
+RUST_LOG=info RUSTFLAGS='--cfg getrandom_backend="wasm_js"' trunk serve
