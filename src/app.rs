@@ -28,7 +28,7 @@ pub fn load_image_from_path(path: &std::path::Path) -> Result<egui::ColorImage> 
 enum AppStatus {
     Menu,
     Credits,
-    Settings,
+    //Settings,
     GameReadyToStart,
     PlayingGame,
     Died
@@ -129,7 +129,7 @@ impl DinoGame {
     }
 
     /// Displays the main menu
-    fn update_menu(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut egui::Ui) {
+    fn update_menu(&mut self, _ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
         // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Dinosaur game");
@@ -165,13 +165,13 @@ impl DinoGame {
     }
 
     fn draw_dino_rest(&mut self, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
-        render::draw_dino_rest_state(self, x*(render::size as f64), y*(render::size as f64), painter, ui, ctx)?;
+        render::draw_dino_rest_state(self, x*(render::SIZE as f64), y*(render::size as f64), painter, ui, ctx)?;
         Ok(())
     }
 
     fn draw_dino(&mut self, mut x: f64, mut y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
-        x*=render::size as f64;
-        y*=render::size as f64;
+        x*=render::SIZE as f64;
+        y*=render::SIZE as f64;
         if self.dino_y != 100.0 || self.state == AppStatus::Died {
             render::draw_dino_still(self, x, y, painter.clone(), ui, ctx)?;
             return Ok(())
@@ -187,7 +187,7 @@ impl DinoGame {
 
     fn draw_enemy(&mut self, enemy: Enemy, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
         //render::draw_enemy(enemy, &painter)?;
-        render::draw_cacti_small(self, enemy.start_x*(render::size as f64), 271.0*(render::size as f64), &painter, ui, ctx)?;
+        render::draw_cacti_small(self, enemy.start_x*(render::SIZE as f64), 271.0*(render::size as f64), &painter, ui, ctx)?;
         Ok(())
     }
 
@@ -278,7 +278,7 @@ impl DinoGame {
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
         
         // scoreboard
-        render::draw_numbers(((self.dino_distance/85.0) as i32).to_string(), self, 800.0*(render::size as f64), 210.0* render::size as f64, &painter.clone(), ui, &mut ctx.clone())?;
+        render::draw_numbers(((self.dino_distance/85.0) as i32).to_string(), self, 800.0*(render::SIZE as f64), 210.0* render::size as f64, &painter.clone(), ui, &mut ctx.clone())?;
 
         for enemy in (self.enemys).clone().iter_mut() {
             if !enemy.ignore {
@@ -293,8 +293,8 @@ impl DinoGame {
         }
 
         if self.tick > 0 {
-            render::draw_floor(self, ((30.0+2400.0-self.dino_distance%2400.0-20.0)*(render::size as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
-            render::draw_floor(self, ((30.0-self.dino_distance%2400.0)*(render::size as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, ((30.0+2400.0-self.dino_distance%2400.0-20.0)*(render::SIZE as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, ((30.0-self.dino_distance%2400.0)*(render::SIZE as f64)).into(), (324.0*render::size).into(), &painter.clone(), ui, ctx)?;
         }
 
         Ok(())

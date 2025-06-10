@@ -33,10 +33,8 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --lib --target wasm32-unknown-unknown
+      - run:
+          RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo check --all-features --lib --target wasm32-unknown-unknown
 
   test:
     name: Test Suite
@@ -48,7 +46,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+      - run: sudo apt update -y && sudo apt-get install -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
       - uses: actions-rs/cargo@v1
         with:
           command: test

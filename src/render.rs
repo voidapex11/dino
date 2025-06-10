@@ -9,7 +9,7 @@ use std::io::Cursor;
 use image::ImageReader;
 use log::debug;
 
-pub const size: f32 = 0.8;
+pub const SIZE: f32 = 0.8;
 
 /// Renders part of the asset map to the painter
 pub fn render(
@@ -20,7 +20,7 @@ pub fn render(
     _ui: &mut Ui,
     ctx: &eframe::egui::Context,
     mut rx: f32, mut ry: f32,
-    loc_size: f32,
+    loc_SIZE: f32,
     uv1: Pos2,
     uv2: Pos2
 ) -> Result<()> {
@@ -32,11 +32,11 @@ pub fn render(
                 .with_guessed_format()
                 .expect("Cursor io never fails")).decode()?;
 
-            let img_size = [image.width() as _, image.height() as _];
+            let img_SIZE = [image.width() as _, image.height() as _];
             let image_buffer = image.to_rgba8();
             let pixels = image_buffer.as_flat_samples();
             egui::ColorImage::from_rgba_unmultiplied(
-                img_size,
+                img_SIZE,
                 pixels.as_slice(),
             ) },
             egui::TextureOptions::default()))
@@ -45,8 +45,8 @@ pub fn render(
 
     let x: f32 = x as f32;
     let y: f32 = y as f32;
-    rx*=loc_size;
-    ry*=loc_size;
+    rx*=loc_SIZE;
+    ry*=loc_SIZE;
     // 1517/120
 
     painter.image(//12.6666667
@@ -62,7 +62,7 @@ pub fn render(
 pub fn draw_dino_rest_state(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 80.0;
     let ry = 90.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(0.03, 0.0);
     let uv2 = pos2(0.068, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -72,7 +72,7 @@ pub fn draw_dino_rest_state(game: &mut DinoGame, x: f64, y: f64, painter: Painte
 pub fn draw_dino_left(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 88.0;
     let ry = 90.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(1854.0/2446.0, 0.0);
     let uv2 = pos2(1942.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -82,7 +82,7 @@ pub fn draw_dino_left(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui:
 pub fn draw_dino_right(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 88.0;
     let ry = 90.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(1942.0/2446.0, 0.0);
     let uv2 = pos2(2030.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -92,7 +92,7 @@ pub fn draw_dino_right(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui
 pub fn draw_dino_still(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 88.0;
     let ry = 90.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(0.686_274_5, 0.0);
     let uv2 = pos2(0.720_996_74, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -102,7 +102,7 @@ pub fn draw_dino_still(game: &mut DinoGame, x: f64, y: f64, painter: Painter, ui
 pub fn draw_cacti_small(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 40.0;
     let ry = 90.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(446.0/2446.0, 0.0);
     let uv2 = pos2(480.0/2446.0, 0.5);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -112,7 +112,7 @@ pub fn draw_cacti_small(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, 
 pub fn draw_floor(game: &mut DinoGame, x: f64, y: f64, painter: &Painter, ui: &mut Ui, ctx: &eframe::egui::Context) -> Result<()> {
     let rx: f32 = 2400.0;
     let ry = 25.0;
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let uv1 = pos2(2.0/2446.0, 102.0/194.0);
     let uv2 = pos2(2402.0/2446.0, 128.0/194.0);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
@@ -154,16 +154,16 @@ pub fn draw_number(number: f32, game: &mut DinoGame, x: f64, y: f64, painter: &P
     let cords = get_number_cords(number)?;
     let rx: f32 = cords[1]- cords[0]+2.0;
     let ry = 25.0;
-    let scale = size *5.0 /4.0 *0.7;
+    let scale = SIZE *5.0 /4.0 *0.7;
     let uv1 = pos2((cords[0]+1.0)/2446.0, 0.0/194.0);
     let uv2 = pos2((cords[1]-1.0)/2446.0, 25.0/194.0);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
     Ok(())
 }
 
-pub fn draw_white(x: f64, y: f64, dx: f64, dy: f64, painter: &Painter) -> Result<()> {
+pub fn draw_white(x: f64, y: f64, _dx: f64, _dy: f64, _painter: &Painter) -> Result<()> {
     let mut mesh = Mesh::default();
-    let scale = size*1.0;
+    let scale = SIZE*1.0;
     let colour = Color32::from_rgb(255,255,255);
     let mut points = vec![
         [0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]
