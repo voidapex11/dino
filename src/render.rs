@@ -20,7 +20,7 @@ pub fn render(
     _ui: &mut Ui,
     ctx: &eframe::egui::Context,
     mut rx: f32, mut ry: f32,
-    loc_SIZE: f32,
+    loc_size: f32,
     uv1: Pos2,
     uv2: Pos2
 ) -> Result<()> {
@@ -32,11 +32,11 @@ pub fn render(
                 .with_guessed_format()
                 .expect("Cursor io never fails")).decode()?;
 
-            let img_SIZE = [image.width() as _, image.height() as _];
+            let img_size = [image.width() as _, image.height() as _];
             let image_buffer = image.to_rgba8();
             let pixels = image_buffer.as_flat_samples();
             egui::ColorImage::from_rgba_unmultiplied(
-                img_SIZE,
+                img_size,
                 pixels.as_slice(),
             ) },
             egui::TextureOptions::default()))
@@ -45,8 +45,8 @@ pub fn render(
 
     let x: f32 = x as f32;
     let y: f32 = y as f32;
-    rx*=loc_SIZE;
-    ry*=loc_SIZE;
+    rx*=loc_size;
+    ry*=loc_size;
     // 1517/120
 
     painter.image(//12.6666667
@@ -141,7 +141,7 @@ pub fn draw_numbers(mut numbers: String, game: &mut DinoGame, x: f64, y: f64, pa
     };
     debug!("{}", numbers);
     for c in numbers.chars() {
-        let c_float = (c.to_digit(10).ok_or_else( || -1)).unwrap() as f32;
+        let c_float = (c.to_digit(10).ok_or(-1)).unwrap() as f32;
         debug!("number as float: {}", c_float);
         let gap = get_number_cords(c_float)?;
         draw_number(c_float, game, x+space as f64, y, painter, ui, &mut ctx.clone()).unwrap();
@@ -165,9 +165,7 @@ pub fn draw_white(x: f64, y: f64, _dx: f64, _dy: f64, _painter: &Painter) -> Res
     let mut mesh = Mesh::default();
     let scale = SIZE*1.0;
     let colour = Color32::from_rgb(255,255,255);
-    let mut points = vec![
-        [0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]
-    ];
+    let mut points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
 
     for point in points.iter_mut() {
         let vn = Vertex { pos: Pos2::new(((point[0]*scale) as f64+x) as f32, ((point[1]*scale) as f64+y) as f32), color: colour, uv: Pos2::new(0.0, 0.0) };

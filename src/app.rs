@@ -149,7 +149,7 @@ impl DinoGame {
     }
     
     /// Displays the credits
-    fn update_credits(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
+    fn update_credits(&mut self, _ctx: &eframe::egui::Context, _frame: &mut eframe::Frame, ui: &mut Ui) {
          ui.vertical_centered(|ui| {
             ui.heading("Credits");
             easy_mark::easy_mark(ui, "# Made by voidapex11"); // using markup as well as
@@ -293,8 +293,8 @@ impl DinoGame {
         }
 
         if self.tick > 0 {
-            render::draw_floor(self, ((30.0+2400.0-self.dino_distance%2400.0-20.0)*(render::SIZE as f64)).into(), (324.0*render::SIZE).into(), &painter.clone(), ui, ctx)?;
-            render::draw_floor(self, ((30.0-self.dino_distance%2400.0)*(render::SIZE as f64)).into(), (324.0*render::SIZE).into(), &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, (30.0+2400.0-self.dino_distance%2400.0-20.0)*(render::SIZE as f64), (324.0*render::SIZE).into(), &painter.clone(), ui, ctx)?;
+            render::draw_floor(self, (30.0-self.dino_distance%2400.0)*(render::SIZE as f64), (324.0*render::SIZE).into(), &painter.clone(), ui, ctx)?;
         }
 
         Ok(())
