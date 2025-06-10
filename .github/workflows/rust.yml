@@ -131,6 +131,7 @@ jobs:
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        sudo apt update -y && sudo apt-get install -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
 
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
