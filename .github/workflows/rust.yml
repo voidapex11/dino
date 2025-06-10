@@ -35,10 +35,8 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --lib --target wasm32-unknown-unknown
+      - run:
+          RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo check --all-features --lib --target wasm32-unknown-unknown
 
   test:
     name: Test Suite
@@ -96,7 +94,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.72.0
+          toolchain: 1.81.0
           target: wasm32-unknown-unknown
           override: true
       - name: Download and install Trunk binary
