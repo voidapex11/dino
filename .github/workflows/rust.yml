@@ -135,7 +135,7 @@ jobs:
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
     - name: Install cross for linux
-      #if: contains(matrix.TARGET, 'linux')
+      if: contains(matrix.TARGET, 'gnu')
       run: |
         cargo install cross --locked --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
 
@@ -146,7 +146,7 @@ jobs:
 
     - name: Build
       run: |
-        cross build --verbose --release --target ${{ matrix.TARGET }}
+        CROSS_NO_WARNINGS=0 && cross build --verbose --release --target ${{ matrix.TARGET }}
 
     - name: Rename
       run: cp target/${{ matrix.TARGET }}/release/dino${{ matrix.EXTENSION }} dino-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
