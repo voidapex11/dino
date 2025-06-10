@@ -160,7 +160,7 @@ impl DinoGame {
     
 
     fn jump(&mut self) -> Result<()> {
-        self.dino_speed_y -= self.dino_speed*0.55+10.0;
+        self.dino_speed_y -= 20.0;
         Ok(())
     }
 
@@ -193,17 +193,18 @@ impl DinoGame {
 
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
         self.dino_speed+=0.02;
-
+        
+        //enemy spawning
         if self.tick > 0 || self.dino_y < 100.0 {
             self.tick += 1;
             self.dino_distance+=self.dino_speed*0.3;
             
             if self.cooldown==0 {
                 let mut rng = rand::rng();
-                let chance = rng.random_range(1..=130) as f64;
-                if chance == 1.0 || self.enemys.is_empty() && chance <= 6.0 {
+                let chance = rng.random_range(1..=1300);
+                if chance <= 31 || self.enemys.is_empty() && chance <= 100 {
                     self.enemys.push(Enemy::default());
-                    self.cooldown=40;
+                    self.cooldown=32;
                 }
             }
         }
@@ -270,32 +271,14 @@ impl DinoGame {
         _frame: &mut eframe::Frame,
         ui: &mut Ui
     ) -> Result<()> {
-        if ui.button("jump").clicked() {
-            self.dino_speed_y = -20.0;
-        };
-
-        if ui.button("spawn").clicked() {
-            self.enemys.push(Enemy::default())
-        };
-       
-        if ui.button("clear").clicked() {
-            self.enemys = Vec::new()
-        };
-
-        if ui.button("tick").clicked() {
-            Self::tick_game(self, ui).unwrap();
-        };
-
-        ui.add(egui::Slider::new(&mut self.dino_y, 0.0..=1000.0).text("y"));
-        //ui.add(egui::Slider::new(&mut (self.dino_distance/200.0), 0.0..=10000.0));
-        
         ui.heading("Dino Game");
 
                 
         let (_, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
-
-        render::draw_numbers(((self.dino_distance/600.0) as i32).to_string(), self, 700.0*(render::size as f64), 210.0* render::size as f64, &painter.clone(), ui, &mut ctx.clone())?;
+        
+        // scoreboard
+        render::draw_numbers(((self.dino_distance/85.0) as i32).to_string(), self, 800.0*(render::size as f64), 210.0* render::size as f64, &painter.clone(), ui, &mut ctx.clone())?;
 
         for enemy in (self.enemys).clone().iter_mut() {
             if !enemy.ignore {
@@ -354,12 +337,14 @@ impl DinoGame {
                 egui::Event::Key{key, ..} => {
                     if *key==Key::W || *key==Key::ArrowDown {
                         *self = DinoGame::default();
+                        self.state= AppStatus::PlayingGame;
                         let _ = Self::jump(self);
                     }
                 },
                 egui::Event::Text(t) => {
                     if t=="W" || t==" " {
                         *self = DinoGame::default();
+                        self.state = AppStatus::PlayingGame;
                         let _ =Self::jump(self);
                     }
                 }

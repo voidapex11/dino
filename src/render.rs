@@ -1,7 +1,7 @@
 //! # render
 //! this 
 use egui::{Ui, Color32, Pos2, Painter};
-use epaint::Rect;
+use epaint::{Rect, Vertex, Mesh};
 use anyhow::{Result, anyhow};
 use crate::app::DinoGame;
 use epaint::pos2;
@@ -158,5 +158,21 @@ pub fn draw_number(number: f32, game: &mut DinoGame, x: f64, y: f64, painter: &P
     let uv1 = pos2((cords[0]+1.0)/2446.0, 0.0/194.0);
     let uv2 = pos2((cords[1]-1.0)/2446.0, 25.0/194.0);
     render(game, x, y, painter.clone(), ui, ctx, rx, ry, scale, uv1, uv2)?;
+    Ok(())
+}
+
+pub fn draw_white(x: f64, y: f64, dx: f64, dy: f64, painter: &Painter) -> Result<()> {
+    let mut mesh = Mesh::default();
+    let scale = size*1.0;
+    let colour = Color32::from_rgb(255,255,255);
+    let mut points = vec![
+        [0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]
+    ];
+
+    for point in points.iter_mut() {
+        let vn = Vertex { pos: Pos2::new(((point[0]*scale) as f64+x) as f32, ((point[1]*scale) as f64+y) as f32), color: colour, uv: Pos2::new(0.0, 0.0) };
+        mesh.vertices.push(vn);
+    }
+    mesh.indices.extend_from_slice(&[0, 1, 2, 1,2,3]);
     Ok(())
 }
