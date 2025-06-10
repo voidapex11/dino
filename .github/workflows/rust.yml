@@ -113,7 +113,7 @@ jobs:
           TARGET: aarch64-unknown-linux-gnu
 
         - os: ubuntu-latest
-          TARGET: armv7-unknown-linux-gnueabihf
+          TARGET: armv7-unknown-linux-gnue
 
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
