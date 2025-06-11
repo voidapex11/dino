@@ -8,11 +8,11 @@
 use crate::render;
 use anyhow::Result;
 use eframe::egui;
-use egui::{Key, Painter, Sense, Ui, Pos2};
+use egui::{Key, Painter, Pos2, Sense, Ui};
 use egui_demo_lib::easy_mark;
+use log::warn;
 use rand::prelude::*;
 use std::path::Path;
-use log::warn;
 
 pub fn load_image_from_path(path: &std::path::Path) -> Result<egui::ColorImage> {
     let image = image::ImageReader::open(path)?.decode()?;
@@ -173,7 +173,7 @@ impl DinoGame {
 
     fn jump(&mut self) -> Result<()> {
         if self.dino_y != 100.0 {
-            return Ok(())
+            return Ok(());
         };
         self.dino_speed_y -= 20.0;
         Ok(())
@@ -283,7 +283,7 @@ impl DinoGame {
                 kill.push(*enemy);
             }
 
-        if (self.dino_y >= 54.0) & ((enemy.start_x < 105.0) & (enemy.end_x > -15.0)) {
+            if (self.dino_y >= 54.0) & ((enemy.start_x < 105.0) & (enemy.end_x > -15.0)) {
                 self.state = AppStatus::Died;
             }
         }
@@ -308,9 +308,15 @@ impl DinoGame {
                     }
                 }
                 egui::Event::PointerButton { pos, pressed, .. } => {
-                    if !pressed { continue };
-                    if pos.x < 25.0 || pos.x > 1502.0 { continue };
-                    if pos.y < 108.0 || pos.y > 327.0 { continue };
+                    if !pressed {
+                        continue;
+                    };
+                    if pos.x < 25.0 || pos.x > 1502.0 {
+                        continue;
+                    };
+                    if pos.y < 108.0 || pos.y > 327.0 {
+                        continue;
+                    };
                     Self::jump(self)?;
                 }
                 _ => {}
@@ -394,11 +400,17 @@ impl DinoGame {
                     }
                 }
                 egui::Event::PointerButton { pos, pressed, .. } => {
-                    if !pressed { continue };
-                    if pos.x < 25.0 || pos.x > 1502.0 { continue };
-                    if pos.y < 108.0 || pos.y > 327.0 { continue };
+                    if !pressed {
+                        continue;
+                    };
+                    if pos.x < 25.0 || pos.x > 1502.0 {
+                        continue;
+                    };
+                    if pos.y < 108.0 || pos.y > 327.0 {
+                        continue;
+                    };
                     self.state = AppStatus::PlayingGame;
-                    let _ =  Self::jump(self);
+                    let _ = Self::jump(self);
                 }
                 _ => {}
             }
@@ -412,7 +424,7 @@ impl DinoGame {
         ui: &mut Ui,
     ) -> Result<()> {
         ui.heading("You died, play again?");
-        
+
         let input = ui.input(|i| i.clone());
         let events = input.events.clone();
         let mouse_position = input.pointer.latest_pos();
@@ -425,7 +437,12 @@ impl DinoGame {
                         let _ = Self::jump(self);
                     }
                     if *key == Key::G {
-                        warn!("{}", mouse_position.or_else(|| Some(Pos2 { x: -1.0,y: -1.0 })).unwrap());
+                        warn!(
+                            "{}",
+                            mouse_position
+                                .or_else(|| Some(Pos2 { x: -1.0, y: -1.0 }))
+                                .unwrap()
+                        );
                     }
                 }
                 egui::Event::Text(t) => {
