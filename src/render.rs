@@ -175,9 +175,11 @@ fn get_number_cords(number: f32) -> Result<[f32; 2]> {
         7.0 => Ok([1432.0, 1454.0]),
         8.0 => Ok([1452.0, 1474.0]),
         9.0 => Ok([1472.0, 1494.0]),
+        10.0 => Ok([1492.0, 1534.0]),
         _ => Err(anyhow!("Invalid number")),
     }
 }
+
 pub fn draw_numbers(
     mut numbers: String,
     game: &mut DinoGame,
@@ -186,14 +188,34 @@ pub fn draw_numbers(
     painter: &Painter,
     ui: &mut Ui,
     ctx: &mut eframe::egui::Context,
+    score: bool,
 ) -> Result<()> {
     let mut space: f32 = 0.0;
     for _ in 0..(4 - numbers.chars().count()).max(0) {
         numbers = "0".to_owned() + &numbers;
     }
+    
+    if score {
+        let c_float = 10 as f32;
+        debug!("number as float: {}", c_float);
+        let gap = get_number_cords(c_float)?;
+        draw_number(
+            c_float,
+            game,
+            x + space as f64,
+            y,
+            painter,
+            ui,
+            &mut ctx.clone(),
+        )
+        .unwrap();
+        space += (gap[1] - gap[0] + 20.0) * 0.7;
+
+    }
+
     debug!("{}", numbers);
     for c in numbers.chars() {
-        let c_float = (c.to_digit(10).ok_or(-1)).unwrap() as f32;
+        let c_float = (c.to_digit(10).or(Some(10))).unwrap() as f32;
         debug!("number as float: {}", c_float);
         let gap = get_number_cords(c_float)?;
         draw_number(

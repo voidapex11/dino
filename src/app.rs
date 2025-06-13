@@ -76,6 +76,7 @@ pub struct DinoGame {
 
     #[serde(skip)]
     dino_distance: f64,
+    high_score: f64,
 
     #[serde(skip)]
     dino_speed: f64,
@@ -92,6 +93,9 @@ pub struct DinoGame {
     cooldown: i32,
 
     #[serde(skip)]
+    intro_mode: i32,
+
+    #[serde(skip)]
     pub asset_map: Option<egui::TextureHandle>,
 }
 
@@ -106,7 +110,9 @@ impl Default for DinoGame {
             dino_speed_y: 0.0,
             dino_speed: 25.0,
             dino_distance: 0.0,
+            high_score: 0.0,
             cooldown: 20,
+            intro_mode: 0,
             enemys: Vec::new(),
             asset_map: None,
         }
@@ -165,9 +171,14 @@ impl DinoGame {
     ) {
         ui.vertical_centered(|ui| {
             ui.heading("Credits");
-            easy_mark::easy_mark(ui, "# Made by voidapex11"); // using markup as well as
-                                                              // programaticaly constructing is
-                                                              // because why not
+            easy_mark::easy_mark(ui, "# Made by voidapex11\n\nMany thanks to the online resources that made this program possible."); 
+            // using markup as well as
+            // programaticaly constructing is
+            // because why not
+            ui.heading("\n\n");
+            if ui.button("Go back").clicked() {
+                self.state = AppStatus::Menu;
+            }
         });
     }
 
@@ -243,9 +254,19 @@ impl DinoGame {
     fn tick_game(&mut self, ui: &mut Ui) -> Result<()> {
         self.dino_speed += 0.02;
 
+        if self.intro_mode == 1 && self.dino_y ==100.0 {
+            self.tick+=1;
+            self.intro_mode=2;
+        };
+        
+        if self.intro_mode == 0 && self.dino_y!=100.0 {
+            self.intro_mode = 1;
+        }
+
         //enemy spawning
         if self.tick > 0 || self.dino_y < 100.0 {
             self.tick += 1;
+            self.intro_mode+=20;
             self.dino_distance += self.dino_speed * 0.3;
 
             if self.cooldown == 0 {
@@ -298,7 +319,7 @@ impl DinoGame {
         for event in &events {
             match event {
                 egui::Event::Key { key, .. } => {
-                    if *key == Key::W || *key == Key::ArrowDown {
+                    if *key == Key::W || *key == Key::ArrowUp {
                         Self::jump(self)?;
                     }
                 }
@@ -334,18 +355,33 @@ impl DinoGame {
     ) -> Result<()> {
         ui.heading("Dino Game");
 
-        let (_, painter) = ui.allocate_painter(ui.available_size_before_wrap(), Sense::drag());
-
+        let (_, painter) = ui.allocate_painter(egui::vec2(1300.0_f32.min(200.0+(self.intro_mode as f32)), 300.0), Sense::drag());
+        if self.high_score < self.dino_distance {
+            self.high_score = self.dino_distance;
+        };
         // scoreboard
         render::draw_numbers(
             ((self.dino_distance / 85.0) as i32).to_string(),
             self,
-            800.0 * (render::SIZE as f64),
+            1500.0 * (render::SIZE as f64),
             210.0 * render::SIZE as f64,
             &painter.clone(),
             ui,
             &mut ctx.clone(),
+            false,
         )?;
+
+        render::draw_numbers(
+            String::from(&((self.high_score / 85.0) as i32).to_string()),
+            self,
+            1350.0 * (render::SIZE as f64),
+            210.0 * render::SIZE as f64,
+            &painter.clone(),
+            ui,
+            &mut ctx.clone(),
+            true,
+        )?;
+        
 
         for enemy in (self.enemys).clone().iter_mut() {
             if !enemy.ignore {
@@ -363,7 +399,7 @@ impl DinoGame {
             render::draw_floor(
                 self,
                 (30.0 + 2400.0 - self.dino_distance % 2400.0 - 20.0) * (render::SIZE as f64),
-                (324.0 * render::SIZE).into(),
+                (320.0 * render::SIZE).into(),
                 &painter.clone(),
                 ui,
                 ctx,
@@ -371,7 +407,7 @@ impl DinoGame {
             render::draw_floor(
                 self,
                 (30.0 - self.dino_distance % 2400.0) * (render::SIZE as f64),
-                (324.0 * render::SIZE).into(),
+                (320.0 * render::SIZE).into(),
                 &painter.clone(),
                 ui,
                 ctx,
@@ -382,13 +418,13 @@ impl DinoGame {
     }
 
     fn ready(&mut self, ui: &mut Ui) {
-        ui.heading("ready?");
-        ui.heading("skjdhaf");
+        ui.heading("Ready?");
+        ui.heading("Click or press space, w or up arrow to start.");
         let events = ui.input(|i| i.clone()).events.clone();
         for event in &events {
             match event {
                 egui::Event::Key { key, .. } => {
-                    if *key == Key::W || *key == Key::ArrowDown {
+                    if *key == Key::W || *key == Key::ArrowUp {
                         self.state = AppStatus::PlayingGame;
                         let _ = Self::jump(self);
                     }
@@ -423,7 +459,11 @@ impl DinoGame {
         _frame: &mut eframe::Frame,
         ui: &mut Ui,
     ) -> Result<()> {
-        ui.heading("You died, play again?");
+        ui.heading("You died, play again?\n");
+        if ui.button("Return to main menu").clicked() {
+            self.state = AppStatus::Menu;
+        };
+        ui.heading("");
 
         let input = ui.input(|i| i.clone());
         let events = input.events.clone();
@@ -431,7 +471,7 @@ impl DinoGame {
         for event in &events {
             match event {
                 egui::Event::Key { key, .. } => {
-                    if *key == Key::W || *key == Key::ArrowDown {
+                    if *key == Key::W || *key == Key::ArrowUp {
                         *self = DinoGame::default();
                         self.state = AppStatus::PlayingGame;
                         let _ = Self::jump(self);
@@ -451,6 +491,20 @@ impl DinoGame {
                         self.state = AppStatus::PlayingGame;
                         let _ = Self::jump(self);
                     }
+                }
+                egui::Event::PointerButton { pos, pressed, .. } => {
+                    if !pressed {
+                        continue;
+                    };
+                    if pos.x < 25.0 || pos.x > 1502.0 {
+                        continue;
+                    };
+                    if pos.y < 108.0 || pos.y > 327.0 {
+                        continue;
+                    };
+                    *self = DinoGame::default();
+                    self.state = AppStatus::PlayingGame;
+                    let _ = Self::jump(self);
                 }
                 _ => {}
             }
@@ -513,7 +567,6 @@ impl eframe::App for DinoGame {
                 ui.label("Invalid app state");
             }
 
-            ui.separator();
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
@@ -522,6 +575,7 @@ impl eframe::App for DinoGame {
                     "Source code."
                 ));
                 egui::warn_if_debug_build(ui);
+                ui.separator();
             });
         });
     }
