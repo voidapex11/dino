@@ -196,7 +196,7 @@ pub fn draw_numbers(
     }
 
     if score {
-        let c_float = 10 as f32;
+        let c_float = 10_f32;
         debug!("number as float: {}", c_float);
         let gap = get_number_cords(c_float)?;
         draw_number(
@@ -214,7 +214,7 @@ pub fn draw_numbers(
 
     debug!("{}", numbers);
     for c in numbers.chars() {
-        let c_float = (c.to_digit(10).or(Some(10))).unwrap() as f32;
+        let c_float = (c.to_digit(10).unwrap_or(10)) as f32;
         debug!("number as float: {}", c_float);
         let gap = get_number_cords(c_float)?;
         draw_number(
